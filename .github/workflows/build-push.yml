@@ -1,8 +1,6 @@
 name: build-push
 
 on:
-  schedule:
-    - cron: "0 1 * * *"
   push:
     branches:
       - "deployer-7"
@@ -11,11 +9,22 @@ jobs:
   publish:
     name: Publish and push deployer docker image
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        deployer: [ '6', '7']
+        include:
+          # includes a new variable of additionalTag
+          # for the matrix leg matching the deployer version
+          - deployer: '6'
+            downloadUrl: 'https://deployer.org/releases'
+          - deployer: '7'
+            additionalTag: sebastianhofer86/deployer:latest,
+            downloadUrl: 'https://github.com/deployphp/deployer/releases/download'
+
     steps:
       -
         uses: actions/checkout@v2
-        with:
-          ref: deployer-7
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -25,11 +34,18 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      -
+        name: Get deployer version for phar download
+        id: version
+        run: |
+          echo "DEPLOYER_VERSION=$(git -c 'versionsort.suffix=-' ls-remote --tags https://github.com/deployphp/deployer.git | cut --delimiter='/' --fields=3 | tr '-' '~' | sort --version-sort | grep v${{ matrix.deployer }} | tail --lines=1)" >> $GITHUB_OUTPUT
       -
         name: Build and push
         uses: docker/build-push-action@v4
         with:
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: sebastianhofer86/deployer:7,sebastianhofer86/deployer:latest
+          tags: ${{ matrix.additionalTag }}sebastianhofer86/deployer:${{ matrix.deployer }}
+          build-args: |
+            deployer_version=${{ steps.version.outputs.DEPLOYER_VERSION }}
+            download_url=${{ matrix.downloadUrl }}
