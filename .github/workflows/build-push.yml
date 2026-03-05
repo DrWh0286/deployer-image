@@ -23,7 +23,7 @@ jobs:
             downloadUrl: 'https://deployer.org/releases'
           - deployer: '7'
             additionalTag: sebastianhofer86/deployer:latest,
-            downloadUrl: 'https://github.com/deployphp/deployer/releases/download'
+            downloadUrl: 'https://deployer.org/releases'
 
     steps:
       -
